@@ -1,9 +1,13 @@
 ---
 name: toastmasters-timer
-description: |
-  A self-contained single-file HTML/JS Toastmasters Club Timer. Displays green/yellow/red traffic lights at configurable times, rings a synthesized bell, and supports Ice Breaker, Prepared Speech, Evaluation, and Custom speech presets. No dependencies, no server needed — open in any browser.
+description: A self-contained single-file HTML/JS Toastmasters Club Timer.
+metadata: {}
 version: 1.0.0
 ---
+
+# Toastmasters Timer
+
+A standalone `toastmasters-timer.html` file that runs entirely in the browser. Open it from your filesystem — no internet connection needed during use.
 
 ## Files
 
@@ -19,9 +23,9 @@ version: 1.0.0
 
 ## Instructions
 
-- Call the `run_js` tool
+Call the `run_js` tool
 
-# Toastmasters Timer Skill
+## Features
 
 ## What This Is
 
