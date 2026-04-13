@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toastmasters Timer</title>
+<style>
+:root {
+  --bg: #0d0d13;
+  --surface: #16161e;
+  --surface2: #1e1e28;
+  --border: rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.16);
+  --text: #ededf5;
+  --text-muted: #7878a0;
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --green-ring: rgba(34,197,94,0.25);
+  --yellow: #eab308;
+  --yellow-dim: rgba(234,179,8,0.12);
+  --yellow-ring: rgba(234,179,8,0.25);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --red-ring: rgba(239,68,68,0.25);
+  --accent: #6366f1;
+  --accent-dark: #4f51d0;
+  --font-timer: 'Courier New', 'Lucida Console', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.5rem 1rem 3rem;
+  gap: 1.75rem;
+}
+/* Header */
+.header { text-align: center; }
+.header h1 {
+  font-size: 0.75rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+/* Preset Buttons */
+.presets { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.preset-btn {
+  padding: 7px 18px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.preset-btn:hover { border-color: var(--border-hover); color: var(--text); }
+.preset-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Traffic Light Housing */
+.traffic-housing {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 60px;
+  padding: 20px 28px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.light {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  transition: background 0.25s, box-shadow 0.25s;
+  position: relative;
+}
+.light::after {
+  content: '';
+  position: absolute;
+  top: 12px; left: 12px;
+  width: 18px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  transform: rotate(-35deg);
+}
+.light.green-off  { background: var(--green-dim);  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); }
+.light.yellow-off { background: var(--yellow-dim); box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); }
+.light.red-off    { background: var(--red-dim);    box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); }
+.light.green-on   { background: var(--green);  box-shadow: 0 0 0 6px var(--green-ring), inset 0 2px 4px rgba(0,0,0,0.2); }
+.light.yellow-on  { background: var(--yellow); box-shadow: 0 0 0 6px var(--yellow-ring), inset 0 2px 4px rgba(0,0,0,0.2); }
+.light.red-on     { background: var(--red);    box-shadow: 0 0 0 6px var(--red-ring), inset 0 2px 4px rgba(0,0,0,0.2); }
+
+/* Timer */
+.timer-wrap { text-align: center; }
+.timer-display {
+  font-family: var(--font-timer);
+  font-size: clamp(5rem, 18vw, 9rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--text);
+  transition: color 0.3s;
+}
+.timer-display.overtime { color: var(--red); }
+
+/* Phase label */
+.phase-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  min-height: 1.5em;
+  margin-top: 8px;
+  transition: color 0.3s;
+}
+
+/* Progress bar */
+.progress-wrap {
+  width: 100%;
+  max-width: 400px;
+  height: 3px;
+  background: var(--surface2);
+  border-radius: 2px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.8s linear, background 0.3s;
+}
+.progress-fill.p-green  { background: var(--green); }
+.progress-fill.p-yellow { background: var(--yellow); }
+.progress-fill.p-red    { background: var(--red); }
+
+/* Controls */
+.controls { display: flex; gap: 10px; align-items: center; }
+.btn-start {
+  padding: 0 32px;
+  height: 48px;
+  min-width: 120px;
+  border: none;
+  border-radius: 100px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: 0.02em;
+}
+.btn-start:hover { background: var(--accent-dark); }
+.btn-start:active { transform: scale(0.97); }
+.btn-start.paused { background: #3a3a5c; }
+.btn-reset {
+  padding: 0 20px;
+  height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-reset:hover { border-color: var(--border-hover); color: var(--text); }
+
+/* Settings Toggle */
+.settings-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+.settings-toggle:hover { color: var(--text); }
+.settings-toggle svg { flex-shrink: 0; }
+
+/* Settings Panel */
+.settings-panel {
+  width: 100%;
+  max-width: 460px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: none;
+  gap: 2rem;
+  flex-direction: column;
+}
+.settings-panel.open { display: flex; }
+
+.s-section {}
+.s-title {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.time-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.time-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-size: 14px;
+  color: var(--text);
+}
+.dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.time-input {
+  width: 52px;
+  padding: 6px 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--font-timer);
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+}
+.time-input::-webkit-inner-spin-button,
+.time-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.time-input:focus { border-color: var(--accent); }
+.time-sep { font-family: var(--font-timer); color: var(--text-muted); font-size: 16px; }
+
+/* Bell rows */
+.bell-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+.bell-row label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text);
+}
+.bell-row input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.bell-count {
+  width: 48px;
+  padding: 4px 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.bell-count::-webkit-inner-spin-button,
+.bell-count::-webkit-outer-spin-button { -webkit-appearance: none; }
+.bell-count:focus { border-color: var(--accent); }
+.bell-count:disabled { opacity: 0.35; }
+.rings-label { font-size: 12px; color: var(--text-muted); }
+
+.test-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.test-btn:hover { border-color: var(--border-hover); color: var(--text); }
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.slider-row label { font-size: 12px; color: var(--text-muted); min-width: 48px; }
+.slider-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+  height: 4px;
+  cursor: pointer;
+}
+.slider-val {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 38px;
+  text-align: right;
+}
+
+/* Keyboard hint */
+.kbd-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  letter-spacing: 0.05em;
+}
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  font-family: var(--font-timer);
+  font-size: 10px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Toastmasters Timer</h1>
+</div>
+
+<div class="presets">
+  <button class="preset-btn active" data-preset="icebreaker" onclick="selectPreset(this,'icebreaker')">Ice Breaker</button>
+  <button class="preset-btn" data-preset="prepared" onclick="selectPreset(this,'prepared')">Prepared Speech</button>
+  <button class="preset-btn" data-preset="evaluation" onclick="selectPreset(this,'evaluation')">Evaluation</button>
+  <button class="preset-btn" data-preset="custom" onclick="selectPreset(this,'custom')">Custom</button>
+</div>
+
+<div class="traffic-housing">
+  <div class="light green-off"  id="light-green"></div>
+  <div class="light yellow-off" id="light-yellow"></div>
+  <div class="light red-off"    id="light-red"></div>
+</div>
+
+<div class="timer-wrap">
+  <div class="timer-display" id="timer">0:00</div>
+  <div class="phase-label" id="phase-label">Ready</div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-fill" id="progress-fill"></div>
+</div>
+
+<div class="controls">
+  <button class="btn-reset" onclick="resetTimer()">Reset</button>
+  <button class="btn-start" id="btn-start" onclick="toggleTimer()">Start</button>
+</div>
+
+<button class="settings-toggle" onclick="toggleSettings()" id="settings-toggle">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+  Settings
+</button>
+
+<div class="settings-panel" id="settings-panel">
+
+  <div class="s-section">
+    <div class="s-title">Light Timing</div>
+    <div class="time-row">
+      <div class="time-label"><div class="dot" style="background:#22c55e"></div>Green Light</div>
+      <div class="time-inputs">
+        <input type="number" class="time-input" id="green-min" min="0" max="59" value="4">
+        <span class="time-sep">:</span>
+        <input type="number" class="time-input" id="green-sec" min="0" max="59" value="0">
+      </div>
+    </div>
+    <div class="time-row">
+      <div class="time-label"><div class="dot" style="background:#eab308"></div>Yellow Light</div>
+      <div class="time-inputs">
+        <input type="number" class="time-input" id="yellow-min" min="0" max="59" value="5">
+        <span class="time-sep">:</span>
+        <input type="number" class="time-input" id="yellow-sec" min="0" max="59" value="0">
+      </div>
+    </div>
+    <div class="time-row">
+      <div class="time-label"><div class="dot" style="background:#ef4444"></div>Red Light</div>
+      <div class="time-inputs">
+        <input type="number" class="time-input" id="red-min" min="0" max="59" value="6">
+        <span class="time-sep">:</span>
+        <input type="number" class="time-input" id="red-sec" min="0" max="59" value="0">
+      </div>
+    </div>
+    <div class="time-row">
+      <div class="time-label"><div class="dot" style="background:#ff3333; border: 1.5px solid #ef4444;"></div>Overtime Bell</div>
+      <div class="time-inputs">
+        <input type="number" class="time-input" id="overtime-min" min="0" max="59" value="7">
+        <span class="time-sep">:</span>
+        <input type="number" class="time-input" id="overtime-sec" min="0" max="59" value="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="s-section">
+    <div class="s-title">Bell Settings</div>
+    <div class="bell-row">
+      <label><input type="checkbox" id="bell-green" checked> Bell at Green (1 ring)</label>
+    </div>
+    <div class="bell-row">
+      <label><input type="checkbox" id="bell-yellow" checked> Bell at Yellow (1 ring)</label>
+    </div>
+    <div class="bell-row">
+      <label><input type="checkbox" id="bell-red" checked> Bell at Red (1 ring)</label>
+    </div>
+    <div class="bell-row">
+      <label><input type="checkbox" id="bell-overtime" checked> Bell at Overtime</label>
+      <input type="number" class="bell-count" id="overtime-rings" value="2" min="1" max="5">
+      <span class="rings-label">rings</span>
+      <button class="test-btn" onclick="testBell()">Test ♪</button>
+    </div>
+
+    <div class="slider-row" style="margin-top:12px;">
+      <label>Volume</label>
+      <input type="range" id="volume" min="0" max="100" value="70" step="1" oninput="document.getElementById('vol-val').textContent=this.value+'%'">
+      <span class="slider-val" id="vol-val">70%</span>
+    </div>
+    <div class="slider-row">
+      <label>Tone</label>
+      <input type="range" id="tone-freq" min="300" max="1400" value="880" step="10" oninput="document.getElementById('tone-val').textContent=this.value+'Hz'">
+      <span class="slider-val" id="tone-val">880Hz</span>
+    </div>
+    <div class="slider-row">
+      <label>Decay</label>
+      <input type="range" id="tone-decay" min="5" max="30" value="15" step="1" oninput="document.getElementById('decay-val').textContent=(this.value/10).toFixed(1)+'s'">
+      <span class="slider-val" id="decay-val">1.5s</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="kbd-hint"><kbd>Space</kbd> start / pause &nbsp;&nbsp; <kbd>R</kbd> reset</div>
+
+<script>
+const PRESETS = {
+  icebreaker:  { g: [4,0],  y: [5,0],  r: [6,0],  o: [7,0]  },
+  prepared:    { g: [5,0],  y: [6,0],  r: [7,0],  o: [8,0]  },
+  evaluation:  { g: [2,0],  y: [2,30], r: [3,0],  o: [3,30] },
+  custom:      { g: [4,0],  y: [5,0],  r: [6,0],  o: [7,0]  }
+};
+
+let elapsed = 0;
+let running = false;
+let interval = null;
+let audioCtx = null;
+let bellFired = { green: false, yellow: false, red: false, overtime: false };
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function getTiming() {
+  const v = id => parseInt(document.getElementById(id).value) || 0;
+  return {
+    green:    v('green-min')    * 60 + v('green-sec'),
+    yellow:   v('yellow-min')   * 60 + v('yellow-sec'),
+    red:      v('red-min')      * 60 + v('red-sec'),
+    overtime: v('overtime-min') * 60 + v('overtime-sec')
+  };
+}
+
+function setInputs(g, y, r, o) {
+  document.getElementById('green-min').value   = g[0]; document.getElementById('green-sec').value   = g[1];
+  document.getElementById('yellow-min').value  = y[0]; document.getElementById('yellow-sec').value  = y[1];
+  document.getElementById('red-min').value     = r[0]; document.getElementById('red-sec').value     = r[1];
+  document.getElementById('overtime-min').value= o[0]; document.getElementById('overtime-sec').value= o[1];
+}
+
+function selectPreset(btn, name) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (name !== 'custom') {
+    const p = PRESETS[name];
+    setInputs(p.g, p.y, p.r, p.o);
+  }
+  resetTimer();
+}
+
+function fmt(s) {
+  const m = Math.floor(s / 60), sec = s % 60;
+  return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+function updateDisplay() {
+  const t = getTiming();
+  const el = id => document.getElementById(id);
+
+  el('timer').textContent = fmt(elapsed);
+
+  const pf = el('progress-fill');
+  const pl = el('phase-label');
+
+  if (elapsed < t.green) {
+    el('timer').className = 'timer-display';
+    pl.textContent = 'Ready — speak freely';
+    pl.style.color = '';
+    pf.className = 'progress-fill';
+    pf.style.width = t.green > 0 ? ((elapsed / t.green) * 100).toFixed(1) + '%' : '0%';
+    el('light-green').className  = 'light green-off';
+    el('light-yellow').className = 'light yellow-off';
+    el('light-red').className    = 'light red-off';
+  } else if (elapsed < t.yellow) {
+    el('timer').className = 'timer-display';
+    pl.textContent = 'Green — minimum time reached';
+    pl.style.color = '#22c55e';
+    const span = t.yellow - t.green;
+    pf.className = 'progress-fill p-green';
+    pf.style.width = span > 0 ? (((elapsed - t.green) / span) * 100).toFixed(1) + '%' : '100%';
+    el('light-green').className  = 'light green-on';
+    el('light-yellow').className = 'light yellow-off';
+    el('light-red').className    = 'light red-off';
+  } else if (elapsed < t.red) {
+    el('timer').className = 'timer-display';
+    pl.textContent = 'Yellow — wrap it up soon';
+    pl.style.color = '#eab308';
+    const span = t.red - t.yellow;
+    pf.className = 'progress-fill p-yellow';
+    pf.style.width = span > 0 ? (((elapsed - t.yellow) / span) * 100).toFixed(1) + '%' : '100%';
+    el('light-green').className  = 'light green-on';
+    el('light-yellow').className = 'light yellow-on';
+    el('light-red').className    = 'light red-off';
+  } else if (elapsed < t.overtime) {
+    el('timer').className = 'timer-display';
+    pl.textContent = 'Red — time to conclude';
+    pl.style.color = '#ef4444';
+    const span = t.overtime - t.red;
+    pf.className = 'progress-fill p-red';
+    pf.style.width = span > 0 ? (((elapsed - t.red) / span) * 100).toFixed(1) + '%' : '100%';
+    el('light-green').className  = 'light green-on';
+    el('light-yellow').className = 'light yellow-on';
+    el('light-red').className    = 'light red-on';
+  } else {
+    el('timer').className = 'timer-display overtime';
+    pl.textContent = 'OVERTIME — please stop';
+    pl.style.color = '#ef4444';
+    pf.className = 'progress-fill p-red';
+    pf.style.width = '100%';
+    el('light-green').className  = 'light green-on';
+    el('light-yellow').className = 'light yellow-on';
+    el('light-red').className    = 'light red-on';
+  }
+}
+
+function tick() {
+  elapsed++;
+  const t = getTiming();
+  if (elapsed === t.green    && !bellFired.green    && document.getElementById('bell-green').checked)    { ringBell(1); bellFired.green = true; }
+  if (elapsed === t.yellow   && !bellFired.yellow   && document.getElementById('bell-yellow').checked)   { ringBell(1); bellFired.yellow = true; }
+  if (elapsed === t.red      && !bellFired.red      && document.getElementById('bell-red').checked)      { ringBell(1); bellFired.red = true; }
+  if (elapsed === t.overtime && !bellFired.overtime && document.getElementById('bell-overtime').checked) {
+    const n = parseInt(document.getElementById('overtime-rings').value) || 2;
+    ringBell(n); bellFired.overtime = true;
+  }
+  updateDisplay();
+}
+
+function toggleTimer() {
+  getAudioCtx();
+  running = !running;
+  const btn = document.getElementById('btn-start');
+  if (running) {
+    interval = setInterval(tick, 1000);
+    btn.textContent = 'Pause';
+    btn.classList.add('paused');
+  } else {
+    clearInterval(interval);
+    btn.textContent = 'Resume';
+    btn.classList.remove('paused');
+  }
+}
+
+function resetTimer() {
+  clearInterval(interval);
+  running = false;
+  elapsed = 0;
+  bellFired = { green: false, yellow: false, red: false, overtime: false };
+  const btn = document.getElementById('btn-start');
+  btn.textContent = 'Start';
+  btn.classList.remove('paused');
+  updateDisplay();
+}
+
+function ringBell(times) {
+  const ctx = getAudioCtx();
+  const vol = parseInt(document.getElementById('volume').value) / 100;
+  const freq = parseInt(document.getElementById('tone-freq').value);
+  const decay = parseInt(document.getElementById('tone-decay').value) / 10;
+
+  for (let i = 0; i < times; i++) {
+    const delay = i * (decay * 1000 + 400);
+    setTimeout(() => {
+      // Fundamental
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol * 0.6, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + decay);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + decay);
+      // 2nd harmonic
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.value = freq * 2.756;
+      gain2.gain.setValueAtTime(vol * 0.25, ctx.currentTime);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + decay * 0.7);
+      osc2.start(ctx.currentTime); osc2.stop(ctx.currentTime + decay * 0.7);
+      // 3rd partial
+      const osc3 = ctx.createOscillator();
+      const gain3 = ctx.createGain();
+      osc3.connect(gain3); gain3.connect(ctx.destination);
+      osc3.type = 'sine';
+      osc3.frequency.value = freq * 5.4;
+      gain3.gain.setValueAtTime(vol * 0.1, ctx.currentTime);
+      gain3.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + decay * 0.4);
+      osc3.start(ctx.currentTime); osc3.stop(ctx.currentTime + decay * 0.4);
+    }, delay);
+  }
+}
+
+function testBell() {
+  getAudioCtx();
+  const n = parseInt(document.getElementById('overtime-rings').value) || 1;
+  ringBell(n);
+}
+
+function toggleSettings() {
+  const panel = document.getElementById('settings-panel');
+  const tog = document.getElementById('settings-toggle');
+  const open = panel.classList.toggle('open');
+  tog.querySelector('svg').style.transform = open ? 'rotate(60deg)' : '';
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); toggleTimer(); }
+  if (e.code === 'KeyR')  { resetTimer(); }
+});
+
+updateDisplay();
+</script>
+</body>
+</html>
